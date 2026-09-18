@@ -1,17 +1,32 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any unauthenticated user can "create", "read", "update", 
-and "delete" any "Todo" records.
-=========================================================================*/
+// 旅行記録アプリのデータモデル。
+// owner認可(allow.owner())により、各レコードは作成したユーザー本人のみが
+// 読み書きできる(owner用のフィールドはAmplifyが自動で追加する)。
 const schema = a.schema({
-  Todo: a
+  Trip: a
     .model({
-      content: a.string(),
+      title: a.string().required(),
+      description: a.string(),
+      startDate: a.date(),
+      endDate: a.date(),
+      entries: a.hasMany('Entry', 'tripId'),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.owner()]),
+
+  Entry: a
+    .model({
+      tripId: a.id().required(),
+      trip: a.belongsTo('Trip', 'tripId'),
+      placeName: a.string().required(),
+      memo: a.string(),
+      visitedDate: a.date(),
+      lat: a.float(),
+      lng: a.float(),
+      // S3内のオブジェクトキー(amplify/storage/resource.tsで定義したパスに対応)
+      photoKey: a.string(),
+    })
+    .authorization((allow) => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -19,35 +34,6 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'identityPool',
+    defaultAuthorizationMode: 'userPool',
   },
 });
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
