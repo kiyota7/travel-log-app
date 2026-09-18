@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { client } from '@/lib/amplify-client';
+import TripMap from '@/components/TripMap';
+import EntryCard from '@/components/EntryCard';
 import type { Schema } from '@/amplify/data/resource';
 
 type Trip = Schema['Trip']['type'];
+type Entry = Schema['Entry']['type'];
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +25,7 @@ export default function TripDetailPage() {
     endDate: '',
   });
   const [saving, setSaving] = useState(false);
+  const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -42,6 +47,15 @@ export default function TripDetailPage() {
     return () => {
       active = false;
     };
+  }, [id]);
+
+  useEffect(() => {
+    const sub = client.models.Entry.observeQuery({
+      filter: { tripId: { eq: id } },
+    }).subscribe({
+      next: ({ items }) => setEntries([...items]),
+    });
+    return () => sub.unsubscribe();
   }, [id]);
 
   async function handleSave(e: React.FormEvent) {
@@ -67,8 +81,16 @@ export default function TripDetailPage() {
   async function handleDelete() {
     if (!trip) return;
     if (!confirm('この旅行を削除しますか?記録も含めて削除されます。')) return;
+    await Promise.all(
+      entries.map((entry) => client.models.Entry.delete({ id: entry.id })),
+    );
     await client.models.Trip.delete({ id: trip.id });
     router.push('/trips');
+  }
+
+  async function handleDeleteEntry(entryId: string) {
+    if (!confirm('この記録を削除しますか?')) return;
+    await client.models.Entry.delete({ id: entryId });
   }
 
   if (loading) return <p className="text-sm text-black/60 dark:text-white/60">読み込み中...</p>;
@@ -162,10 +184,28 @@ export default function TripDetailPage() {
       )}
 
       <section className="border-t border-black/10 pt-6 dark:border-white/10">
-        <h2 className="text-lg font-semibold">記録</h2>
-        <p className="mt-2 text-sm text-black/60 dark:text-white/60">
-          訪れた場所の記録機能は準備中です。
-        </p>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">記録</h2>
+          <Link
+            href={`/trips/${id}/entries/new`}
+            className="rounded-md border border-black/20 px-3 py-1.5 text-sm dark:border-white/20"
+          >
+            + 記録を追加
+          </Link>
+        </div>
+
+        {entries.length === 0 ? (
+          <p className="mt-4 text-sm text-black/60 dark:text-white/60">
+            まだ記録がありません。「+ 記録を追加」から訪れた場所を記録しましょう。
+          </p>
+        ) : (
+          <div className="mt-4 flex flex-col gap-4">
+            <TripMap entries={entries} />
+            {entries.map((entry) => (
+              <EntryCard key={entry.id} entry={entry} onDelete={handleDeleteEntry} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
