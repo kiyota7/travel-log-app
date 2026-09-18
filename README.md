@@ -41,11 +41,20 @@
 
 ## デプロイ(AWS Amplify Hosting)
 
-1. このリポジトリをGitHubにpushする
-2. [AWS Amplifyコンソール](https://console.aws.amazon.com/amplify/) で
-   「新しいアプリケーションをホスト」からこのリポジトリを接続する
-3. Amplifyがフロントエンド(Next.js)とバックエンド(Amplify Gen2)を自動でビルド・デプロイする
-4. デプロイ完了後に発行されるURL(`https://<branch>.<app-id>.amplifyapp.com`)でアプリを確認できる
+ビルド仕様は`amplify.yml`に定義済み(バックエンド: `ampx pipeline-deploy`、
+フロントエンド: `next build`)。
+
+1. このリポジトリをGitHubにpushする(このリポジトリは既にpush済み)
+2. [AWS Amplifyコンソール](https://console.aws.amazon.com/amplify/)を開く
+3. 「新しいアプリケーションを作成」→「GitHubアプリケーションをホスト」を選択し、
+   GitHubアカウントを認可してこのリポジトリ(`kiyota7/travel-log-app`)とブランチ(`main`)を選択
+4. ビルド設定は`amplify.yml`が自動検出されるのでそのまま「次へ」
+5. 「保存してデプロイ」でビルドが開始される(バックエンド・フロントエンド両方で数分かかる)
+6. デプロイ完了後に発行されるURL(`https://<branch>.<app-id>.amplifyapp.com`)でアプリを確認できる
+
+### 再デプロイ
+
+`main`ブランチにpushするたびに、Amplify Hostingが自動でビルド・再デプロイする。
 
 ## ディレクトリ構成
 

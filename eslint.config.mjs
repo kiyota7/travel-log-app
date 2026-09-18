@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // ampx sandbox / pipeline-deployが生成する一時ビルド成果物
+    ".amplify/**",
   ]),
 ]);
 
