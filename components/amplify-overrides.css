@@ -1,0 +1,8 @@
+/* @aws-amplify/ui-react/styles.css が [class*="amplify"] に all:unset を適用しており、
+   displayの初期値(inline)になってレイアウトが崩れる要素がある。displayだけを
+   ブラウザ標準に戻す(color・spacing等の他プロパティはAmplify自身の詳細ルールに
+   任せるため、allではなくdisplayのみを対象にする)。Amplifyのスタイルシートの直後で
+   importすることで、確実にこのルールより後に適用されるようにする。 */
+[class*="amplify"] {
+  display: revert;
+}
