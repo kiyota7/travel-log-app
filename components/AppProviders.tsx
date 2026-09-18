@@ -5,6 +5,7 @@ import { Authenticator } from '@aws-amplify/ui-react';
 import { I18n } from 'aws-amplify/utils';
 import { translations } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
+import './amplify-overrides.css';
 import outputs from '@/amplify_outputs.json';
 
 Amplify.configure(outputs);
