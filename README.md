@@ -2,6 +2,16 @@
 
 訪れた場所・日付・メモ・写真を旅行ごとに記録できるWebアプリ。
 
+## スクリーンショット
+
+| サインイン | 旅行一覧 |
+|---|---|
+| ![サインイン画面](docs/screenshots/01-signin.png) | ![旅行一覧](docs/screenshots/02-trips-list.png) |
+
+| 旅行詳細(記録一覧+地図) | 記録追加(地図クリックで位置設定) |
+|---|---|
+| ![旅行詳細画面](docs/screenshots/03-trip-detail.png) | ![記録追加画面](docs/screenshots/04-entry-new.png) |
+
 ## 技術スタック
 
 - [Next.js](https://nextjs.org)(App Router, TypeScript)
