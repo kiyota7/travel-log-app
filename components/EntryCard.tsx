@@ -11,7 +11,7 @@ export default function EntryCard({
   onDelete,
 }: {
   entry: Entry;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
@@ -39,12 +39,14 @@ export default function EntryCard({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-medium">{entry.placeName}</h3>
-          <button
-            onClick={() => onDelete(entry.id)}
-            className="shrink-0 text-sm text-red-600"
-          >
-            削除
-          </button>
+          {onDelete && (
+            <button
+              onClick={() => onDelete(entry.id)}
+              className="shrink-0 text-sm text-red-600"
+            >
+              削除
+            </button>
+          )}
         </div>
         {entry.visitedDate && (
           <p className="text-xs text-black/60 dark:text-white/60">{entry.visitedDate}</p>

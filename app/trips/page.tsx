@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { client } from '@/lib/amplify-client';
+import { getOwnerIdentity } from '@/lib/current-user';
 import TripCard from '@/components/TripCard';
 import type { Schema } from '@/amplify/data/resource';
 
@@ -14,17 +15,31 @@ export default function TripsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const sub = client.models.Trip.observeQuery().subscribe({
-      next: ({ items }) => {
-        setTrips([...items]);
-        setLoading(false);
-      },
-      error: () => {
-        setError('旅行一覧の取得に失敗しました。');
-        setLoading(false);
-      },
+    let sub: { unsubscribe: () => void } | undefined;
+    let active = true;
+
+    getOwnerIdentity().then((owner) => {
+      if (!active) return;
+      // Trip/Entryはauthenticated()にも読み取りを許可しているため、
+      // filter無しだと他ユーザーの旅行まで混ざってしまう。自分のものだけに絞る。
+      sub = client.models.Trip.observeQuery({
+        filter: { owner: { eq: owner } },
+      }).subscribe({
+        next: ({ items }) => {
+          setTrips([...items]);
+          setLoading(false);
+        },
+        error: () => {
+          setError('旅行一覧の取得に失敗しました。');
+          setLoading(false);
+        },
+      });
     });
-    return () => sub.unsubscribe();
+
+    return () => {
+      active = false;
+      sub?.unsubscribe();
+    };
   }, []);
 
   return (

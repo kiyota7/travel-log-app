@@ -10,6 +10,7 @@ export default function NewTripPage() {
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +27,7 @@ export default function NewTripPage() {
       description: description.trim() || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
+      isPublic,
     });
     if (errors || !trip) {
       setError('旅行の作成に失敗しました。');
@@ -78,6 +80,15 @@ export default function NewTripPage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+        </label>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+          />
+          みんなに公開する(「みんなの記録」フィードに表示されます)
         </label>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
