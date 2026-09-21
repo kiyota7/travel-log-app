@@ -1,9 +1,9 @@
 import { getCurrentUser } from 'aws-amplify/auth';
 
-// Amplify DataのallowOwner()が自動付与する`owner`フィールドは
-// `${sub}::${username}` という複合形式で保存される(実際にDynamoDBを確認して
-// 判明)。自分の所有レコードを絞り込むfilterや所有者判定には、この形式に
-// 一致する文字列が必要になる。
+// Amplify DataのallowOwner()が自動付与する`owner`フィールドは、DynamoDB上では
+// `${sub}::${username}` という複合形式で保存されている(実際に確認して判明)。
+// list/observeQueryのfilterはこの複合形式との完全一致が必要(例: /tripsページの
+// 自分の旅行への絞り込み)。
 export async function getOwnerIdentity(): Promise<string> {
   const { userId, username } = await getCurrentUser();
   return `${userId}::${username}`;
@@ -14,4 +14,12 @@ export async function getOwnerIdentity(): Promise<string> {
 export async function getUserId(): Promise<string> {
   const { username } = await getCurrentUser();
   return username;
+}
+
+// 個別レコードをget()で取得した場合、返ってくるownerフィールドは複合形式ではなく
+// 生のusername(sub)部分のみになる(list系とget系で返却形式が異なることを実機で
+// 確認済み)。そのため所有者判定はどちらの形式でも一致するように緩く比較する。
+export function isOwnedBy(owner: string | null | undefined, userId: string): boolean {
+  if (!owner) return false;
+  return owner === userId || owner.startsWith(`${userId}::`);
 }

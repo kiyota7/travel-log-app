@@ -39,6 +39,9 @@ export default function NewEntryPage() {
         photoKey = uploadResult.path;
       }
 
+      // 記録は所属する旅行の公開設定を引き継ぐ
+      const { data: trip } = await client.models.Trip.get({ id: tripId });
+
       const { errors } = await client.models.Entry.create({
         tripId,
         placeName: placeName.trim(),
@@ -47,6 +50,7 @@ export default function NewEntryPage() {
         lat: position?.lat,
         lng: position?.lng,
         photoKey,
+        isPublic: trip?.isPublic ?? false,
       });
       if (errors) {
         setError('記録の作成に失敗しました。');

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { client } from '@/lib/amplify-client';
+import { getUserId, isOwnedBy } from '@/lib/current-user';
 import TripMap from '@/components/TripMap';
 import EntryCard from '@/components/EntryCard';
 import type { Schema } from '@/amplify/data/resource';
@@ -15,6 +16,7 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -23,27 +25,32 @@ export default function TripDetailPage() {
     description: '',
     startDate: '',
     endDate: '',
+    isPublic: false,
   });
   const [saving, setSaving] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
 
   useEffect(() => {
     let active = true;
-    client.models.Trip.get({ id }).then(({ data, errors }) => {
-      if (!active) return;
-      if (errors || !data) {
-        setError('旅行が見つかりませんでした。');
-      } else {
-        setTrip(data);
-        setForm({
-          title: data.title,
-          description: data.description ?? '',
-          startDate: data.startDate ?? '',
-          endDate: data.endDate ?? '',
-        });
-      }
-      setLoading(false);
-    });
+    Promise.all([client.models.Trip.get({ id }), getUserId()]).then(
+      ([{ data, errors }, uid]) => {
+        if (!active) return;
+        setUserId(uid);
+        if (errors || !data) {
+          setError('旅行が見つかりませんでした。');
+        } else {
+          setTrip(data);
+          setForm({
+            title: data.title,
+            description: data.description ?? '',
+            startDate: data.startDate ?? '',
+            endDate: data.endDate ?? '',
+            isPublic: data.isPublic ?? false,
+          });
+        }
+        setLoading(false);
+      },
+    );
     return () => {
       active = false;
     };
@@ -58,22 +65,35 @@ export default function TripDetailPage() {
     return () => sub.unsubscribe();
   }, [id]);
 
+  const isOwner = !!trip && !!userId && isOwnedBy(trip.owner, userId);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!trip) return;
     setSaving(true);
+    const visibilityChanged = form.isPublic !== (trip.isPublic ?? false);
     const { data, errors } = await client.models.Trip.update({
       id: trip.id,
       title: form.title.trim(),
       description: form.description.trim() || undefined,
       startDate: form.startDate || undefined,
       endDate: form.endDate || undefined,
+      isPublic: form.isPublic,
     });
-    setSaving(false);
     if (errors || !data) {
+      setSaving(false);
       setError('更新に失敗しました。');
       return;
     }
+    if (visibilityChanged) {
+      // 旅行の公開設定を変えたら、配下の記録も同じ公開設定に揃える
+      await Promise.all(
+        entries.map((entry) =>
+          client.models.Entry.update({ id: entry.id, isPublic: form.isPublic }),
+        ),
+      );
+    }
+    setSaving(false);
     setTrip(data);
     setEditing(false);
   }
@@ -95,6 +115,10 @@ export default function TripDetailPage() {
 
   if (loading) return <p className="text-sm text-black/60 dark:text-white/60">読み込み中...</p>;
   if (error || !trip) return <p className="text-sm text-red-600">{error ?? '旅行が見つかりませんでした。'}</p>;
+
+  if (!isOwner && !trip.isPublic) {
+    return <p className="text-sm text-red-600">この旅行は非公開です。</p>;
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -137,6 +161,14 @@ export default function TripDetailPage() {
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             />
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.isPublic}
+              onChange={(e) => setForm((f) => ({ ...f, isPublic: e.target.checked }))}
+            />
+            みんなに公開する(「みんなの記録」フィードに表示されます)
+          </label>
           <div className="flex gap-2">
             <button
               type="submit"
@@ -157,21 +189,30 @@ export default function TripDetailPage() {
       ) : (
         <div>
           <div className="flex items-start justify-between">
-            <h1 className="text-xl font-bold">{trip.title}</h1>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setEditing(true)}
-                className="rounded-md border border-black/20 px-3 py-1.5 text-sm dark:border-white/20"
-              >
-                編集
-              </button>
-              <button
-                onClick={handleDelete}
-                className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:border-red-700"
-              >
-                削除
-              </button>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">{trip.title}</h1>
+              {trip.isPublic && (
+                <span className="rounded-full bg-black/5 px-2 py-0.5 text-xs text-black/60 dark:bg-white/10 dark:text-white/60">
+                  公開中
+                </span>
+              )}
             </div>
+            {isOwner && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditing(true)}
+                  className="rounded-md border border-black/20 px-3 py-1.5 text-sm dark:border-white/20"
+                >
+                  編集
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:border-red-700"
+                >
+                  削除
+                </button>
+              </div>
+            )}
           </div>
           {(trip.startDate || trip.endDate) && (
             <p className="mt-1 text-sm text-black/60 dark:text-white/60">
@@ -186,23 +227,31 @@ export default function TripDetailPage() {
       <section className="border-t border-black/10 pt-6 dark:border-white/10">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">記録</h2>
-          <Link
-            href={`/trips/${id}/entries/new`}
-            className="rounded-md border border-black/20 px-3 py-1.5 text-sm dark:border-white/20"
-          >
-            + 記録を追加
-          </Link>
+          {isOwner && (
+            <Link
+              href={`/trips/${id}/entries/new`}
+              className="rounded-md border border-black/20 px-3 py-1.5 text-sm dark:border-white/20"
+            >
+              + 記録を追加
+            </Link>
+          )}
         </div>
 
         {entries.length === 0 ? (
           <p className="mt-4 text-sm text-black/60 dark:text-white/60">
-            まだ記録がありません。「+ 記録を追加」から訪れた場所を記録しましょう。
+            {isOwner
+              ? 'まだ記録がありません。「+ 記録を追加」から訪れた場所を記録しましょう。'
+              : 'まだ記録がありません。'}
           </p>
         ) : (
           <div className="mt-4 flex flex-col gap-4">
             <TripMap entries={entries} />
             {entries.map((entry) => (
-              <EntryCard key={entry.id} entry={entry} onDelete={handleDeleteEntry} />
+              <EntryCard
+                key={entry.id}
+                entry={entry}
+                onDelete={isOwner ? handleDeleteEntry : undefined}
+              />
             ))}
           </div>
         )}
