@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '@/amplify/data/resource';
 
@@ -27,7 +28,10 @@ export default function EntryCard({
   }, [entry.photoKey]);
 
   return (
-    <div className="flex gap-3 rounded-lg border border-black/10 p-3 dark:border-white/20">
+    <Link
+      href={`/trips/${entry.tripId}/entries/${entry.id}`}
+      className="flex gap-3 rounded-lg border border-black/10 p-3 hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
+    >
       {photoUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- S3の署名付きURLはドメインが動的なためnext/imageのremotePatternsで扱いづらく、単純なimgタグで表示する
         <img
@@ -41,7 +45,11 @@ export default function EntryCard({
           <h3 className="font-medium">{entry.placeName}</h3>
           {onDelete && (
             <button
-              onClick={() => onDelete(entry.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(entry.id);
+              }}
               className="shrink-0 text-sm text-red-600"
             >
               削除
@@ -53,6 +61,6 @@ export default function EntryCard({
         )}
         {entry.memo && <p className="mt-1 whitespace-pre-wrap text-sm">{entry.memo}</p>}
       </div>
-    </div>
+    </Link>
   );
 }
