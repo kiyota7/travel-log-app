@@ -7,6 +7,7 @@ import { translations } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import './amplify-overrides.css';
 import outputs from '@/amplify_outputs.json';
+import ProfileBootstrap from './ProfileBootstrap';
 
 Amplify.configure(outputs);
 I18n.putVocabularies(translations);
@@ -19,6 +20,7 @@ export default function AppProviders({
 }) {
   return (
     <Authenticator loginMechanisms={['email']}>
+      <ProfileBootstrap />
       {children}
     </Authenticator>
   );
