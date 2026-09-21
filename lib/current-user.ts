@@ -23,3 +23,10 @@ export function isOwnedBy(owner: string | null | undefined, userId: string): boo
   if (!owner) return false;
   return owner === userId || owner.startsWith(`${userId}::`);
 }
+
+// 自分以外の任意ユーザーのFollow等をownerでfilterしたい場合に使う。
+// このアプリはメールアドレスでのセルフサインアップのみのため、Cognitoの
+// username(=sub)は全ユーザーで一致する(sub === username)という前提に基づく。
+export function ownerIdentityFor(userId: string): string {
+  return `${userId}::${userId}`;
+}
